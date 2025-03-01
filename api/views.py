@@ -19,9 +19,10 @@ initialize_gee()
 def fetch_band_values(request):
     if request.method == "POST":
         try:
-            geojson_geometry = json.loads(request.body)
+            geojson_data = json.loads(request.body.decode("utf-8"))
 
-
+            geojson_geometry = geojson_data["geometry"]
+            
             if not geojson_geometry:
                 return JsonResponse({"error": "No geometry provided"}, status=400)
 
