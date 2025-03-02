@@ -56,7 +56,11 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Allow frontend to access backend
 ]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",  # Frontend origin
+]
 
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 CORS_ALLOW_HEADERS = ["*"]  # Allow all headers
 

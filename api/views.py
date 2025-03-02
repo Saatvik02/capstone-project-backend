@@ -1,11 +1,8 @@
-from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-import ee
-from api.gee_init import initialize_gee
-
-from django.http import JsonResponse
+import httpx
+from asgiref.sync import async_to_sync
 
 def home_view(request):
     return JsonResponse({"message": "Welcome to the Crop Mapping API!"})
@@ -13,36 +10,30 @@ def home_view(request):
 def test_view(request):
     return JsonResponse({"message": "Test route working!"})
 
-initialize_gee()
-
 @csrf_exempt
-def fetch_band_values(request):
-    if request.method == "POST":
-        try:
-            geojson_data = json.loads(request.body.decode("utf-8"))
+def fetch_indices(request):
+    if request.method != "POST":
+        return JsonResponse({"message": "Send a POST request with GeoJSON"}, status=405)
 
-            geojson_geometry = geojson_data["geometry"]
-            
-            if not geojson_geometry:
-                return JsonResponse({"error": "No geometry provided"}, status=400)
+    geojson_data = json.loads(request.body.decode("utf-8"))
+    url = "http://localhost:4000/extract-s2-parameters"
+    start_date = "2025-02-15"
+    end_date = "2025-03-01"
+    payload = {'geojson': geojson_data, 'start_date': start_date, 'end_date': end_date}
+    headers = {'Content-Type': 'application/json'}
 
-            region = ee.Geometry(geojson_geometry)
+    async def make_request():
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(url, json=payload, headers=headers)
+            print("response", response)
+            return response
 
-            image = ee.ImageCollection("COPERNICUS/S2") \
-                .filterBounds(region) \
-                .filterDate("2024-01-01", "2024-02-01") \
-                .median()
+    try:
+        response = async_to_sync(make_request) ()
+        if response.status_code == 200:
+            return JsonResponse(response.json(), safe=False)
+        else:
+            return JsonResponse({'error': 'Microservice call failed', 'status_code': response.status_code}, status=response.status_code)
 
-            pixel_values = image.sample(
-                region=region,
-                scale=10,
-                numPixels=1000,
-                geometries=True
-            ).getInfo()
-
-            return JsonResponse({"pixels": pixel_values}, safe=False)
-
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-
-    return JsonResponse({"message": "Send a POST request with GeoJSON"})
+    except httpx.RequestError as e:
+        return JsonResponse({'error': str(e)}, status=500)
