@@ -49,7 +49,7 @@ pip install -r requirements.txt
 Run the Django app with Uvicorn (ASGI server) for async support:
 
 ```bash
-uvicorn crop_mapping_backend.asgi:application --reload
+uvicorn crop_mapping_backend.asgi:application --reload --port 8000
 ```
 
 - `--reload`: Enables auto-reloading for development.
