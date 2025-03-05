@@ -52,22 +52,21 @@ async def fetch_s2_and_s1_indices_async(geojson_data):
                 sensor_name = "Sentinel-1" if source.upper() == "S1" else "Sentinel-2"
 
                 if total_received == 1:  
-                    await send_ws_update(channel_layer, "progress", startProgress=10, endProgress=30, message=f"{sensor_name} Data Retrieved. Awaiting other data...")
+                    await send_ws_update(channel_layer, "progress", startProgress=10, endProgress=25, message=f"{sensor_name} Data Retrieved. Awaiting other data...")
                 elif total_received == 2:
-                    await send_ws_update(channel_layer, "progress", startProgress=30, endProgress=50, message="All Satellite Data Retrieved. Combining Data...")
+                    await send_ws_update(channel_layer, "progress", startProgress=25, endProgress=40, message="All Satellite Data Retrieved. Combining Satellite Data...")
 
         await asyncio.gather(fetch_and_update("s1", url_s1), fetch_and_update("s2", url_s2))
 
         # Step 3: Combining Sentinel-1 and Sentinel-2 
-        await send_ws_update(channel_layer, "progress", startProgress=50, endProgress=65, message="Combining Sentinel-1 and Sentinel-2 data...")
         await asyncio.sleep(10)
 
-        # Step 4: Getting Prediction from Deep Learning Model
-        await send_ws_update(channel_layer, "progress", startProgress=65, endProgress=90, message="Running Deep Learning Model For Mapping...")
+        # Step 4: Running DL Model
+        await send_ws_update(channel_layer, "progress", startProgress=40, endProgress=50, message="Running Deep Learning Model For Mapping...")
         await asyncio.sleep(10)
 
-        # Step 5: Refining Data in Backend
-        await send_ws_update(channel_layer, "progress", startProgress=90, endProgress=95, message="Refining Data...")
+        # Step 5: Refining Data
+        await send_ws_update(channel_layer, "progress", startProgress=50, endProgress=90, message="Refining Data...")
         await asyncio.sleep(10)
 
         return {
