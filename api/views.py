@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from asgiref.sync import async_to_sync
 from datetime import datetime, timedelta
 from channels.layers import get_channel_layer
+import requests
 
 def home_view(request):
     return JsonResponse({"message": "Welcome to the Crop Mapping API!"})
@@ -69,12 +70,14 @@ async def fetch_s2_and_s1_indices_async(geojson_data):
         await send_ws_update(channel_layer, "progress", startProgress=50, endProgress=90, message="Refining Data...")
         await asyncio.sleep(10)
 
-        return {
+        result = {
+            
             source: response.json() if response.status_code == 200 else 
                    {"error": f"{source.upper()} microservice call failed", "status_code": response.status_code}
             for source, response in results.items()
         }
 
+        return result
     except httpx.RequestError as e:
         await send_ws_update(channel_layer, "error", message=f"Error fetching data: {str(e)}")
         return {"error": str(e)}
@@ -88,12 +91,94 @@ def fetch_s2_and_s1_indices(request):
         return JsonResponse({"message": "Send a POST request with GeoJSON"}, status=405)
 
     try:
-        geojson_data = json.loads(request.body.decode("utf-8"))
+        req = json.loads(request.body.decode("utf-8"))
+        print(req)
+        geojson_data = req['geojson']
+        flag = req['flag']
     except json.JSONDecodeError as e:
         return JsonResponse({"error": "Invalid GeoJSON data", "detail": str(e)}, status=400)
 
     try:
         results = async_to_sync(fetch_s2_and_s1_indices_async)(geojson_data)
-        return JsonResponse(results, safe=False)
+        s1_vals = results.get('s1')
+        s2_vals = results.get('s2')
+        combined_input = {}
+        for key in s1_vals:
+            s1_features = s1_vals.get(key, {})
+            s2_features = s2_vals.get(key, {})
+            
+            combined_input[key] = list(s1_features.values()) + list(s2_features.values())
+        if(flag):
+            output = get_crop_prediction(combined_input)
+        else:
+            output = get_dummy_prediction(combined_input)
+        return JsonResponse({"output":output, "results":results})
     except Exception as e:
         return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=500)
+@csrf_exempt
+def get_crop_prediction(combined_input):
+    """
+    Calls the FastAPI microservice to get prediction.
+    :param features: List of 10 floats (model inputs)
+    :return: JSON response with prediction
+    """
+    # channel_layer = get_channel_layer()
+    
+    url = 'http://localhost:6000/bulk-predict'  # Or replace with container IP/service name if dockerized
+    payload = combined_input
+
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        return response.json()  # Returns: {probability, class, cloud_masked}
+    except requests.exceptions.RequestException as e:
+        print(f"Prediction microservice call failed: {e}")
+        return {"error": str(e)}
+    
+async def mock_results(geojson):
+    url = "http://localhost:4000/mock-results"
+    async with httpx.AsyncClient(timeout=60) as client:
+        response = await client.post(url, json=geojson, headers={"Content-Type": "application/json"})
+        return response.json()
+
+@csrf_exempt
+def generate_mock_results(request):
+    if request.method == "POST":
+        geojson = json.loads(request.body.decode("utf-8"))
+        result = async_to_sync(mock_results)(geojson)
+        return JsonResponse(result)
+    return JsonResponse({"error": "Only POST method allowed"}, status=405)
+
+def get_dummy_prediction(data):
+    coordinates = []
+    input_features = []
+
+    for key, val in data.items():
+        coordinates.append(key)
+        input_features.append(val)
+
+    features = []
+    for idx, key in enumerate(coordinates):
+        coord = key.split(',')
+        features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "geodesic": False,
+                "coordinates": [coord[0], coord[1]]
+            },
+            "properties": {
+                "prediction": 0
+            }
+        })
+
+    return {
+        "map":{
+            "type": "FeatureCollection",
+            "features": features,
+        },
+        "metrics":{
+            "ragiCoverage":0,
+            "nonRagiCoverage":100,
+        }
+    }
