@@ -39,3 +39,4 @@ urllib3==2.3.0
 uvicorn==0.34.0
 channels==4.2.0
 websockets
+pandas
