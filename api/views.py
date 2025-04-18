@@ -95,7 +95,7 @@ async def fetch_s2_and_s1_indices_async(geojson_data, startDate, endDate, flag):
             combined_input[key] = monthly_combined
 
         await send_ws_update(channel_layer, "progress", startProgress=40, endProgress=50, message="Sentinel-1 and Sentinel-2 data Merged")
-
+        
         if not flag:
             await send_ws_update(channel_layer, "progress", startProgress=50, endProgress=70, message="Extracting coordinates and features...")
             coordinates = list(combined_input.keys())
@@ -147,11 +147,16 @@ async def fetch_s2_and_s1_indices_async(geojson_data, startDate, endDate, flag):
                 rows.append(row)
 
             df = pd.DataFrame(rows)
+            with open("data.csv", "w") as f:
+                df.to_csv(f, index=False)
             await send_ws_update(channel_layer, "progress", startProgress=65, endProgress=90, message="Time series data prepared. Running Deep Learning Model...")
 
             # Step 4: Run deep learning model (65–90%)
             output_data = await get_crop_prediction(df)
             await send_ws_update(channel_layer, "progress", startProgress=90, endProgress=98, message="Model predictions obtained. Generating features and metrics...")
+            print("prediction done")
+            with open("output.json", "w") as f:
+                json.dump(output_data, f, indent=4)
 
             # Step 5: Generate features and calculate metrics (90–98%)
             output_lookup = {f"{item['lon']},{item['lat']}": item["prediction"] for item in output_data}
@@ -241,7 +246,8 @@ async def get_crop_prediction(combined_input):
     :param combined_input: DataFrame with features
     :return: JSON response with predictions
     """
-    url = 'http://localhost:6000/crop-prediction'
+    # url = 'http://localhost:6000/crop-prediction-transformer'
+    url = 'http://localhost:6000/crop-prediction-psetae'
     payload = combined_input.to_dict(orient='records')  # Convert DataFrame to list of dicts
 
     try:
