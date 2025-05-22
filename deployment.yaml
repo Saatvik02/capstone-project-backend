@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
         - name: agro-backend
-          image: registry.digitalocean.com/safwan/backend:1.0.0
+          image: registry.digitalocean.com/safwan/backend:1.0.1
           ports:
           - containerPort: 8000

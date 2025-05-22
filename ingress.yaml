@@ -6,6 +6,9 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-nginx
     nginx.ingress.kubernetes.io/limit-rps: "10"
     nginx.ingress.kubernetes.io/limit-rpm: "40"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/websocket-services: "backend-service"
 spec:
   tls:
   - hosts:

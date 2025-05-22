@@ -99,7 +99,11 @@ ASGI_APPLICATION = "crop_mapping_backend.asgi.application"
 
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",
+        # "BACKEND": "channels.layers.InMemoryChannelLayer",
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("redis-service", 6379)],
+        },
     },
 }
 

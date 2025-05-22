@@ -18,10 +18,10 @@ jobs:
         run: echo "${{ secrets.DIGITAL_OCEAN_TOKEN }}" | docker login -u "docr" --password-stdin registry.digitalocean.com  
       
       - name: Build Docker Image
-        run: docker build -t registry.digitalocean.com/safwan/backend:1.0.0 .
+        run: docker build -t registry.digitalocean.com/safwan/backend:1.0.1 .
       
       - name: Push Docker Image
-        run: docker push registry.digitalocean.com/safwan/backend:1.0.0
+        run: docker push registry.digitalocean.com/safwan/backend:1.0.1
   
   deploy:
     needs: dockerise
@@ -44,7 +44,11 @@ jobs:
             echo "${KUBECONFIG_DATA}" | base64 --decode > $HOME/.kube/config
   
       - name: Apply Kubernetes Config
-        run: kubectl apply -f deployment.yaml
+        run: |
+          kubectl apply -f deployment.yaml
+          kubectl apply -f redis-deployment.yaml
       
       - name: Rollout Status
-        run: kubectl rollout status deployment/backend-deploy
+        run: |
+          kubectl rollout status deployment/backend-deploy
+          kubectl rollout status deployment/redis-deploy
