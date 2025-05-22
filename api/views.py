@@ -31,8 +31,12 @@ async def send_ws_update(channel_layer, update_type, startProgress=None, endProg
 
 async def fetch_s2_and_s1_indices_async(geojson_data, startDate, endDate, flag):
     channel_layer = get_channel_layer()
-    url_s1 = "http://localhost:4000/extract-s1-parameters"
-    url_s2 = "http://localhost:4000/extract-s2-parameters"
+    # url_s1 = "http://localhost:4000/extract-s1-parameters"
+    # url_s2 = "http://localhost:4000/extract-s2-parameters"
+    # url_s1 = "http://host.docker.internal:4000/extract-s1-parameters"
+    # url_s2 = "http://host.docker.internal:4000/extract-s2-parameters"
+    url_s1 = "https://gee.agroscope.site/extract-s1-parameters"
+    url_s2 = "https://gee.agroscope.site/extract-s2-parameters"
 
     try:
         # Step 1: Fetching Sentinel-1 and Sentinel-2 Data (10–50% handled earlier)
@@ -138,7 +142,7 @@ async def fetch_s2_and_s1_indices_async(geojson_data, startDate, endDate, flag):
 
             for key, month_data in combined_input.items():
                 lon, lat = map(float, key.split(","))
-                row = {"Lon": lon, "Lat": lat}
+                row = {"lon": lon, "lat": lat}
 
                 for month, features in month_data.items():
                     for feat in all_features:
@@ -147,16 +151,11 @@ async def fetch_s2_and_s1_indices_async(geojson_data, startDate, endDate, flag):
                 rows.append(row)
 
             df = pd.DataFrame(rows)
-            with open("data.csv", "w") as f:
-                df.to_csv(f, index=False)
             await send_ws_update(channel_layer, "progress", startProgress=65, endProgress=90, message="Time series data prepared. Running Deep Learning Model...")
 
             # Step 4: Run deep learning model (65–90%)
             output_data = await get_crop_prediction(df)
             await send_ws_update(channel_layer, "progress", startProgress=90, endProgress=98, message="Model predictions obtained. Generating features and metrics...")
-            print("prediction done")
-            with open("output.json", "w") as f:
-                json.dump(output_data, f, indent=4)
 
             # Step 5: Generate features and calculate metrics (90–98%)
             output_lookup = {f"{item['lon']},{item['lat']}": item["prediction"] for item in output_data}
@@ -241,13 +240,9 @@ def fetch_s2_and_s1_indices(request):
         return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=500)
 
 async def get_crop_prediction(combined_input):
-    """
-    Calls the FastAPI microservice to get predictions asynchronously.
-    :param combined_input: DataFrame with features
-    :return: JSON response with predictions
-    """
     # url = 'http://localhost:6000/crop-prediction-transformer'
-    url = 'http://localhost:6000/crop-prediction-psetae'
+    # url = 'http://host.docker.internal:6000/crop-prediction-transformer'
+    url = 'https://model.agroscope.site/crop-prediction-transformer'
     payload = combined_input.to_dict(orient='records')  # Convert DataFrame to list of dicts
 
     try:

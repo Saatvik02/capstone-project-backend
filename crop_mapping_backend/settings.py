@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-w@x8)+sy@b7*@nbldrw_oy^647mvgrg&yq%$oyyft6gi($40c5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -55,15 +55,26 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
+    "https://agroscope.site",
     "http://localhost:5173",  # Allow frontend to access backend
+    "https://backend.agroscope.site",
 ]
 CSRF_TRUSTED_ORIGINS = [
+    "https://agroscope.site",
     "http://localhost:5173",  # Frontend origin
+    "https://backend.agroscope.site",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 CORS_ALLOW_HEADERS = ["*"]  # Allow all headers
+
+# WebSocket specific settings
+CORS_ALLOWED_ORIGINS += [
+    "ws://localhost:5173",
+    "wss://agroscope.site",
+    "wss://backend.agroscope.site",
+]
 
 ROOT_URLCONF = 'crop_mapping_backend.urls'
 

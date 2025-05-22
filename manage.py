@@ -13,7 +13,7 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "runserver":
         import uvicorn
         print("Starting ASGI server with Uvicorn...")
-        uvicorn.run("crop_mapping_backend.asgi:application", host="127.0.0.1", port=8000, reload=True)
+        uvicorn.run("crop_mapping_backend.asgi:application", host="0.0.0.0", port=8000, reload=True)
     else:
         execute_from_command_line(sys.argv)
 

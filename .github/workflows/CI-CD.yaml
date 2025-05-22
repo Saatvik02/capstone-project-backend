@@ -1,0 +1,50 @@
+name: Agroscope Backend CI-CD
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+jobs:
+  dockerise:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Login to Container Registry
+        run: echo "${{ secrets.DIGITAL_OCEAN_TOKEN }}" | docker login -u "docr" --password-stdin registry.digitalocean.com  
+      
+      - name: Build Docker Image
+        run: docker build -t registry.digitalocean.com/safwan/backend:1.0.0 .
+      
+      - name: Push Docker Image
+        run: docker push registry.digitalocean.com/safwan/backend:1.0.0
+  
+  deploy:
+    needs: dockerise
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup Kubectl 
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      
+      - name: Configure kubectl with KUBECONFIG
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        run: |
+            mkdir -p $HOME/.kube
+            echo "${KUBECONFIG_DATA}" | base64 --decode > $HOME/.kube/config
+  
+      - name: Apply Kubernetes Config
+        run: kubectl apply -f deployment.yaml
+      
+      - name: Rollout Status
+        run: kubectl rollout status deployment/backend-deploy

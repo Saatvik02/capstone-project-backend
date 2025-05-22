@@ -1,33 +1,23 @@
-# Base image
+# Use official Python image
 FROM python:3.11-slim
 
-# Set working directory
 WORKDIR /app
 
-# Install dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
+    gcc \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create virtual environment
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Install pip & upgrade
-RUN pip install --upgrade pip
-
-# Copy requirements first (for better Docker caching)
+# Install dependencies
 COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Python packages
-RUN pip install -r requirements.txt
-
-# Copy the entire project
+# Copy project
 COPY . .
 
-# Expose port
 EXPOSE 8000
 
-# Default command
-CMD ["python", "-m" ,"manage", "runserver"]
+# Set default command
+CMD ["uvicorn", "crop_mapping_backend.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--reload", "--ws", "websockets"]

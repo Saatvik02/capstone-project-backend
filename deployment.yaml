@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deploy
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: agro-backend
+  template:
+    metadata:
+      labels:
+        app: agro-backend
+    spec:
+      containers:
+        - name: agro-backend
+          image: registry.digitalocean.com/safwan/backend:1.0.0
+          ports:
+          - containerPort: 8000
